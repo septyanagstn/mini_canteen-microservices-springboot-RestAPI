@@ -31,13 +31,22 @@ public class OrderServiceImpl implements OrderService {
     private final RestClient restClient;
 
     // constructor
-    public OrderServiceImpl(OrderRepository orderRepository) {
+    public OrderServiceImpl(OrderRepository orderRepository){
         this.orderRepository = orderRepository;
-        // mendefinisikan RestClient untuk komunikasi dengan catalog-service
+        // mendefinisikan RestClient untuk komunikasi dengan catalog-service;
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:8081/api/products")
-                .build();
+                        .baseUrl("http://localhost:8081/api/products")
+                        .build();
     }
+    
+    // Versi Docker
+    // public OrderServiceImpl(OrderRepository orderRepository,
+    //         RestClient.Builder restClientBuilder,
+    //         @Value("${catalog.service.url:http://localhost:8081}") String catalogUrl) {
+    //     this.orderRepository = orderRepository;
+    //     // mendefinisikan RestClient untuk komunikasi dengan catalog-service;
+    //     this.restClient = restClientBuilder.baseUrl(catalogUrl).build();
+    // }
 
     @Override
     @Transactional
@@ -52,7 +61,8 @@ public class OrderServiceImpl implements OrderService {
         try {
             for (OrderItemRequestDto itemReq : request.getItems()) {
 
-                // mengambil data product dari catalog-service untuk snapshot data produk yang di order
+                // mengambil data product dari catalog-service untuk snapshot data produk yang
+                // di order
                 Map<String, Object> productResponse = restClient.get()
                         .uri("/{id}", itemReq.getProductId())
                         .retrieve()
@@ -122,7 +132,8 @@ public class OrderServiceImpl implements OrderService {
 
         // Aturan Bisnis: Hanya pesanan berstatus PENDING yang bisa dibayar
         if (!OrderStatus.PENDING.equals(order.getStatus())) {
-            throw new IllegalStateException("Pesanan tidak dapat dibayar karena status saat ini adalah " + order.getStatus());
+            throw new IllegalStateException(
+                    "Pesanan tidak dapat dibayar karena status saat ini adalah " + order.getStatus());
         }
 
         order.setStatus(OrderStatus.PAID);
@@ -138,11 +149,13 @@ public class OrderServiceImpl implements OrderService {
 
         // jika status order sudah dibayar, tidak bisa dicancel
         if (!OrderStatus.PENDING.equals(order.getStatus())) {
-            throw new IllegalStateException("Pesanan tidak dapat dibatalkan karena status saat ini adalah " + order.getStatus());
+            throw new IllegalStateException(
+                    "Pesanan tidak dapat dibatalkan karena status saat ini adalah " + order.getStatus());
         }
 
-        // mengembalikan stok yang sudah dikurangi saat order, dengan mengirim nilai quantity negatif karena fungsi updateStock 
-        // di catalog-service melakukan pengurangan stok  
+        // mengembalikan stok yang sudah dikurangi saat order, dengan mengirim nilai
+        // quantity negatif karena fungsi updateStock
+        // di catalog-service melakukan pengurangan stok
         for (OrderItem item : order.getItems()) {
             try {
                 restClient.patch()
@@ -150,7 +163,8 @@ public class OrderServiceImpl implements OrderService {
                         .retrieve()
                         .toBodilessEntity();
             } catch (Exception e) {
-                throw new RuntimeException("Gagal mengembalikan stok untuk produk " + item.getProductName() + " saat pembatalan pesanan.");
+                throw new RuntimeException(
+                        "Gagal mengembalikan stok untuk produk " + item.getProductName() + " saat pembatalan pesanan.");
             }
         }
 
@@ -159,8 +173,8 @@ public class OrderServiceImpl implements OrderService {
         return mapToResponse(savedOrder);
     }
 
-
-    // fungsi ini digunakan untuk memetakan hasil query db ke dto agar tidak menggunakan entity secara langsung di response
+    // fungsi ini digunakan untuk memetakan hasil query db ke dto agar tidak
+    // menggunakan entity secara langsung di response
     private OrderResponseDto mapToResponse(Order order) {
         OrderResponseDto dto = new OrderResponseDto();
         dto.setId(order.getId());
